@@ -1,6 +1,6 @@
-# Лаба 2
+# Анатомия `Dockerfile`
 
-# Анатомия плохого `Dockerfile`
+## Плохой `Dockerfile`
 Начнем с примера плохого докерфайла, который часто можно встретить в проектах:
 ```Dockerfile
 FROM ubuntu:latest
@@ -23,7 +23,7 @@ CMD python3 /app/app.py
 Так еще и убунту тяжелая, ну зачем!
 
 *Как сделать то надо?* А вот так:
-```
+```docker
 FROM python:3.9-slim-buster
 ```
 Ведь проще взять конкретную версию Python с легковесным дистрибутивом Debian, и вообще топово
@@ -32,7 +32,7 @@ FROM python:3.9-slim-buster
 Если внимательно присмотреться, можно заметить ПЯТЬЬ команд RUN, а ведь каждая создает новый слой в образе, что тупо -> тяжело -> медленно
 
 А вот как надо:
-```
+```docker
 RUN apt-get update && \
     apt-get install -y python3 python3-pip && \
     rm -rf /var/lib/apt/lists/*
@@ -51,9 +51,9 @@ ENV SECRET_KEY=${SECRET_KEY}
 ```
 
 
-# Анатомия ХОРОШЕГО `Dockerfile`
+## ХОРОШИЙ `Dockerfile`
 Вот как должен выглядеть правильный Dockerfile:
-```
+```docker
 FROM python:3.9-slim-buster
 
 WORKDIR /app
@@ -117,7 +117,7 @@ docker run
 
 ## `Docker Compose` и распространенные ошибки
 Начнем с плохого примера:
-```docker-compose
+```yml
 version: '3'
 services:
   web:
@@ -125,7 +125,7 @@ services:
     ports:
       - "5000:5000"
     environment:
-      - SECRET_KEY=mysupersecretkey123
+      - SECRET_KEY=mysupersecretkey567
     volumes:
       - .:/app
     privileged: true
@@ -159,7 +159,7 @@ volumes:
 Ну и очевидно надо монтировать отдельные файлы!
 
 ## Исправленный "Хороший" `docker-compose`
-```docker-compose
+```yml
 version: '3.8'
 services:
   web:
@@ -199,20 +199,20 @@ networks:
 
 ## Примеры:
 Внутренние сети (помечаем сеть как `internal`)
-```docker-compose
+```yml
 networks:
   backend:
     internal: true
 ```
 
 Доступ к портам (вместо `ports` укажем какой нибудь хард порт)
-```docker-compose
+```yml
 expose:
   - "5677"
 ```
 
 Наименьшие привилегии (все и так понятно)
-```docker-compose
+```yml
 security_opt:
   - no-new-privileges:true
 cap_drop:

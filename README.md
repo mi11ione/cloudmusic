@@ -5,9 +5,10 @@
 
 ## [Dockerfile](/lab2/)
 
-## CI/CD
+## [CI/CD](/lab3/)
 
 # лабы CLOUD :33
+топово
 
 ## AWS
 

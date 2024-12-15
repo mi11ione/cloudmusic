@@ -1,18 +1,18 @@
-# Лаба 1
+# NGINX
 
-## Начало работы
+## Начало
 Чтобы начать, надо зайти в приложение TERMINAL и написать там команду смешную (если у вас макбук, а если нет, то хахахаахах)
 `brew install nginx`
 
 ## Потом надо создать сами сайтики:
-```
+```sh
 sudo mkdir -p /opt/homebrew/var/www/site1
 sudo mkdir -p /opt/homebrew/etc/nginx/ssl/site1
 ```
 и так же со вторым.
 
 ## Затем надо сертификаты:
-```
+```sh
 sudo openssl req -x509 -nodes -days 567 -newkey rsa:2048 \
 -keyout /opt/homebrew/etc/nginx/ssl/site1/privkey.pem \
 -out /opt/homebrew/etc/nginx/ssl/site1/fullchain.pem
@@ -22,7 +22,7 @@ sudo openssl req -x509 -nodes -days 567 -newkey rsa:2048 \
 Хорошо идем, но могут возникнуть `permission_denied!!!!` и это может сильно ОБИДЕТЬ.
 Но слава богу я проходил курс информатики в университете ITMO и помню что есть такие смешные штуки, как CHMOD RWXRWXRXWRXRWXXWR
 И вот крутое решение:
-```
+```sh
 sudo chmod 644 /opt/homebrew/etc/nginx/ssl/site1/fullchain.pem
 sudo chmod 644 /opt/homebrew/etc/nginx/ssl/site1/privkey.pem
 sudo chown $(whoami):admin /opt/homebrew/etc/nginx/ssl/site1/*
@@ -32,7 +32,7 @@ sudo chown $(whoami):admin /opt/homebrew/etc/nginx/ssl/site1/*
 
 Надо `nginx.conf` файл тоже написать нормально, а то не заведется (находится к /opt/homebrew/etc/nginx/, ну а если вы на WINDOWS то грустно)!
 Вот как я сделал, смотрите внимательно:
-```
+```swift
 worker_processes  1;
 pid /opt/homebrew/var/run/nginx.pid;
 
@@ -59,7 +59,7 @@ http {
 2. Проверяем правильные ли он слушает порты: `sudo lsof -i :80`, `sudo lsof -i :443`
 
 Ну и вот, что из этого вышло!
-```
+```sh
 mi11ion@mi11ionair ~ % ps aux | grep nginx
 mi11ion          23485   0.0  0.0 410733328   1568 s000  R+    7:09PM   0:00.00 grep nginx
 mi11ion          23479   0.0  0.0 410890384   2048   ??  S     7:09PM   0:00.00 nginx: worker process  
