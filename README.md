@@ -3,7 +3,7 @@
 
 ## [Nginx](/lab1/)
 
-## Dockerfile
+## [Dockerfile](/lab2/)
 
 ## CI/CD
 

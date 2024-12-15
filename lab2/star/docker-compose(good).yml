@@ -1,0 +1,32 @@
+version: '3.8'
+services:
+  web:
+    build: 
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "127.0.0.1:5000:5000"
+    environment:
+      - SECRET_KEY=${SECRET_KEY}
+    read_only: true
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    
+  redis:
+    image: redis:7.0-alpine
+    expose:
+      - "6379"
+    volumes:
+      - redis_data:/data:ro
+    user: redis
+    networks:
+      - backend
+
+volumes:
+  redis_data:
+
+networks:
+  backend:
+    internal: true
