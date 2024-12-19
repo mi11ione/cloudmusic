@@ -1,5 +1,4 @@
-# Лабы DEVOPS :DD
-круто
+# SWAG
 
 ## [Nginx](/lab1/)
 
@@ -7,11 +6,8 @@
 
 ## [CI/CD](/lab3/)
 
-# лабы CLOUD :33
-топово
+## [AWS](/aws/)
 
-## AWS
+## [Azure](/azure/)
 
-## Azure
-
-# [Теория](/Theory/)
+## [Теория](/Theory/)
