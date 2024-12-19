@@ -63,22 +63,23 @@ on:
 ### Вторая - отсутствие разделения на jobs
 Что не так:
 Все шаги выполняются в одном `job build-and-deploy`. А из-за этого отладка усложняется и нет async выполнения -> долго -> дорого
+Также можно увидеть, что у нас всегда выбирается убунту лейтест, что нестабильно, это исправим заодно
 
 Как исправить:
 ```yml
 jobs:
   test:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     steps:
 
   build:
     needs: test
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     steps:
 
   deploy:
     needs: build
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     steps:
 ```
 Вот мы разделили тест билд и сборку, чтобы не делать все подряд каждый раз!
@@ -128,6 +129,21 @@ scp -r dist/* user@production-server:/var/www/
 ```
 Так мы добились безопасного процесса деплоя, возможность отката и логирование изменений
 
+### Шестая - нет кеширования
+У нас нет кеша, и я не про деньги, а про очень важную вещь, которая позволит нам ЗНАЧИТЕЛЬНО ускорить работу за счет переиспользования закешированнных зависимостей между запусками
+```yml
+- name: Cache node modules
+  uses: actions/cache@v3
+  id: npm-cache
+  with:
+    path: |
+      node_modules
+      ~/.npm
+    key: ${{ runner.os }}-npm-${{ hashFiles('**/package-lock.json') }}
+    restore-keys: |
+      ${{ runner.os }}-npm-
+```
+
 ## Хороший воркфлоу:
 А если применить все вышеперечисленные советы, то вот что получится:
 ```yml
@@ -141,7 +157,7 @@ on:
 
 jobs:
   test:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     timeout-minutes: 30
     
     steps:
@@ -153,7 +169,19 @@ jobs:
           node-version: '18'
           cache: 'npm'
           
+      - name: Cache node modules
+        uses: actions/cache@v3
+        id: npm-cache
+        with:
+          path: |
+            node_modules
+            ~/.npm
+          key: ${{ runner.os }}-npm-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-npm-
+          
       - name: Install dependencies
+        if: steps.npm-cache.outputs.cache-hit != 'true'
         run: npm ci
         
       - name: Run linter
@@ -170,7 +198,7 @@ jobs:
           
   build:
     needs: test
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     if: github.event_name == 'push'
     
     steps:
@@ -182,7 +210,19 @@ jobs:
           node-version: '18'
           cache: 'npm'
           
+      - name: Cache node modules
+        uses: actions/cache@v3
+        id: npm-cache
+        with:
+          path: |
+            node_modules
+            ~/.npm
+          key: ${{ runner.os }}-npm-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-npm-
+          
       - name: Install dependencies
+        if: steps.npm-cache.outputs.cache-hit != 'true'
         run: npm ci
         
       - name: Build
@@ -196,7 +236,7 @@ jobs:
           
   deploy:
     needs: build
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     environment: production
     
@@ -234,27 +274,38 @@ jobs:
 ## Интегрируем с HashiCorp Vault (BONUS 😜)
 Чтобы все было безопасно и прикольно, можем использовать ХИТ под названием Hashicorp Vault:
 ```yml
+## Secrets🌟✨🤩
+Хранить секреты прямо в переменных в пайплайне это плохо, но почему?
+Вот много причин почему:
+1. Нет детальных политик доступа
+2. Сложно управлять правами для разных команд
+3. Отсутствует механизм временного доступа
+4. Нет логирования доступа к секретам
+5. Сложно отследить использование
+6. Нет уведомлений о подозрительной активности
+7. Нет автоматической ротации секретов
+8. Секреты могут попасть в логи
+9. Отсутствует шифрование
+
+## Интегрируем с HashiCorp Vault (BONUS 😜)
+Чтобы все было безопасно и прикольно, используем HashiCorp Vault через официальный GitHub Action:
+
+```yml
 jobs:
   deploy:
     steps:
-      - name: Install Vault CLI
-        run: |
-          curl -fsSL https://apt.releases.hashicorp.com/gpg | sudo apt-key add -
-          sudo apt-add-repository "deb [arch=amd64] https://apt.releases.hashicorp.com $(lsb_release -cs) main"
-          sudo apt-get update && sudo apt-get install vault
+      - uses: hashicorp/vault-action@v2
+        with:
+          url: https://vault.company.com
+          method: jwt
+          role: ci
+          jwtGithubAudience: "https://github.com/my-org"
+          secrets: |
+            aws/creds/deploy-role access_key | AWS_ACCESS_KEY_ID ;
+            aws/creds/deploy-role secret_key | AWS_SECRET_ACCESS_KEY
 
-      - name: Authenticate with Vault
-        run: |
-          export VAULT_ADDR='https://vault.company.com'
-          vault login -method=jwt role=ci jwt=${{ secrets.VAULT_JWT }}
-          
-      - name: Get secrets
-        run: |
-          AWS_CREDS=$(vault read -format=json aws/creds/deploy-role)
-          export AWS_ACCESS_KEY_ID=$(echo $AWS_CREDS | jq -r .data.access_key)
-          export AWS_SECRET_ACCESS_KEY=$(echo $AWS_CREDS | jq -r .data.secret_key)
-          
-          aws s3 sync dist/ s3://${PRODUCTION_BUCKET}/
+      - name: Deploy to S3
+        run: aws s3 sync dist/ s3://${PRODUCTION_BUCKET}/
 ```
 
 Но как он нам поможет? Ну он дает нам кучу удобных фич, чтобы решить ранее перечисленные проблемы!
